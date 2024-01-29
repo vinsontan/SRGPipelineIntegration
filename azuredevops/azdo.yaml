@@ -14,7 +14,7 @@ steps:
     name: evalTime
   - bash: |
       export LOG_LEVEL="verbose"
-      dta srg evaluate --start-time=$(evalTime.start) --end-time=$(evalTime.end) --stage="your-stage" --service="your-service-name"
+      dta srg evaluate --start-time=$(evalTime.start) --end-time=$(evalTime.end) --stage="stage" --service="easytrade"
     env:
       DYNATRACE_URL_GEN3: $(DYNATRACE_URL_GEN3)
       DYNATRACE_CLIENT_ID: $(DYNATRACE_CLIENT_ID)
