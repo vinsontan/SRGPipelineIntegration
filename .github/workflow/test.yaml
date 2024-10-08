@@ -1,19 +1,42 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+# Demo pipeline for SRG evaluation.
+name: demo-pipeline-srg
+on:
+  workflow_dispatch:
 jobs:
-  Explore-GitHub-Actions:
+  test:
     runs-on: ubuntu-latest
+    outputs:
+      startTime: ${{ steps.set-start-end-time.outputs.startTime }}
+      endTime: ${{ steps.set-start-end-time.outputs.endTime }}
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+      - name: "Set start/end time for evaluation"
+        id: set-start-end-time
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          start=$(date -d '10 minute ago' --utc +%FT%TZ)
+          echo "startTime=$start" >> $GITHUB_OUTPUT
+          end=$(date --utc +%FT%TZ)
+          echo "endTime=$end" >> $GITHUB_OUTPUT
 
+  evaluation:
+    needs: test
+    runs-on: ubuntu-latest
+    container:
+      image: "dynatraceace/dt-automation-cli:latest"
+    steps:
+      - name: "Run SRG evaluation"
+        run: |
+          dta srg evaluate
+        env:
+          LOG_LEVEL: "verbose"
+          DYNATRACE_URL_GEN3: ${{ secrets.DYNATRACE_URL_GEN3 }}
+          ACCOUNT_URN: ${{ secrets.ACCOUNT_URN }}
+          DYNATRACE_CLIENT_ID: ${{ secrets.DYNATRACE_CLIENT_ID }}
+          DYNATRACE_SECRET: ${{ secrets.DYNATRACE_SECRET }}
+          DYNATRACE_SSO_URL: ${{ secrets.DYNATRACE_SSO_URL }}
+          SRG_EVALUATION_STOP_ON_FAILURE: "true"
+          SRG_EVALUATION_SERVICE: "demo"
+          SRG_EVALUATION_STAGE: "dev"
+          SRG_EVALUATION_START_TIME: "${{ needs.test.outputs.startTime }}"
+          SRG_EVALUATION_END_TIME: "${{ needs.test.outputs.endTime }}"
+          SRG_EVALUATION_VERSION: "1.0.0"
+          SRG_EVALUATION_BUILD_ID: "${{ github.run_id }}"
